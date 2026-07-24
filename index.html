@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>سنتر هيما - الحضور</title>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  :root { --bg:#1a1a1a; --card:#232323; --gold:#d4af37; --white:#f5f5f5; --red:#e05555; --green:#5bc47a; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--white); font-family:'Segoe UI',Tahoma,Arial,sans-serif; min-height:100vh; }
+  .page { display:none; padding:18px 16px 40px; max-width:520px; margin:0 auto; }
+  .page.on { display:block; }
+  h1 { color:var(--gold); font-size:1.35rem; text-align:center; margin:8px 0 2px; }
+  .sub { text-align:center; color:#aaa; font-size:.85rem; margin-bottom:18px; }
+  .card { background:var(--card); border:1px solid #3a3a3a; border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-size:.9rem; margin-bottom:6px; color:#ccc; }
+  input, select { width:100%; padding:13px; border-radius:10px; border:1px solid var(--gold);
+    background:#1e1e1e; color:var(--white); font-size:1.05rem; margin-bottom:12px; text-align:center; }
+  input:focus { outline:2px solid var(--gold); }
+  .btn { display:block; width:100%; padding:16px; border:none; border-radius:12px; font-size:1.15rem;
+    font-weight:bold; cursor:pointer; margin-bottom:12px; font-family:inherit; }
+  .btn-gold { background:var(--gold); color:#1a1a1a; }
+  .btn-dark { background:var(--card); color:var(--gold); border:1.5px solid var(--gold); }
+  .btn-big { padding:26px; font-size:1.5rem; border-radius:16px; }
+  .btn:active { transform:scale(.98); }
+  #clock { text-align:center; color:var(--gold); font-size:1.7rem; font-weight:bold; margin:6px 0 2px; letter-spacing:1px; }
+  #dateLine { text-align:center; color:#bbb; font-size:.95rem; margin-bottom:16px; }
+  #who { text-align:center; font-size:1.05rem; margin-bottom:4px; }
+  #who b { color:var(--gold); }
+  .msg { padding:13px; border-radius:10px; text-align:center; font-size:1rem; margin-bottom:12px; display:none; line-height:1.5; }
+  .msg.ok { display:block; background:#1e3325; color:var(--green); border:1px solid var(--green); }
+  .msg.err { display:block; background:#33201e; color:var(--red); border:1px solid var(--red); }
+  .msg.wait { display:block; background:#2a2a1e; color:var(--gold); border:1px solid var(--gold); }
+  #scanBox { position:fixed; inset:0; background:#000; z-index:50; display:none; flex-direction:column; }
+  #scanBox.on { display:flex; }
+  #vid { flex:1; width:100%; object-fit:cover; }
+  #scanTop { padding:14px; text-align:center; color:var(--gold); font-size:1.05rem; background:#111; }
+  #scanBottom { padding:14px; background:#111; }
+  .frame { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:230px; height:230px;
+    border:3px solid var(--gold); border-radius:18px; box-shadow:0 0 0 3000px rgba(0,0,0,.35); }
+  table { width:100%; border-collapse:collapse; font-size:.92rem; }
+  th { color:var(--gold); padding:8px 4px; border-bottom:1.5px solid var(--gold); }
+  td { padding:9px 4px; border-bottom:1px solid #333; text-align:center; }
+  .link { color:var(--gold); text-align:center; display:block; margin-top:6px; font-size:.9rem; text-decoration:underline; cursor:pointer; }
+  .foot { text-align:center; color:#666; font-size:.78rem; margin-top:20px; }
+  .row2 { display:flex; gap:10px; }
+  .row2 > * { flex:1; }
+  #qBadge { display:none; text-align:center; color:var(--gold); font-size:.85rem; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<!-- ============ شاشة الإعداد الأول ============ -->
+<div class="page" id="pgSetup">
+  <h1 id="setupTitle">سنتر هيما</h1>
+  <div class="sub">تسجيل الدخول لأول مرة</div>
+  <div class="card">
+    <div id="srvWrap">
+      <label>رابط السيرفر (بياخده من المدير - مرة واحدة بس)</label>
+      <input id="inSrv" placeholder="https://script.google.com/macros/..." style="direction:ltr;font-size:.8rem">
+    </div>
+    <label>كود الموظفة</label>
+    <input id="inCode" inputmode="numeric" placeholder="مثال: 101">
+    <label>الرقم السري</label>
+    <input id="inPin" type="password" inputmode="numeric" placeholder="••••">
+    <button class="btn btn-gold" onclick="doLogin()">دخول</button>
+    <div class="msg" id="msgSetup"></div>
+  </div>
+</div>
+
+<!-- ============ الشاشة الرئيسية ============ -->
+<div class="page" id="pgMain">
+  <h1 id="orgTitle" onclick="adminTap()">سنتر هيما</h1>
+  <div id="who"></div>
+  <div id="clock">--:--</div>
+  <div id="dateLine"></div>
+  <div id="qBadge"></div>
+  <div class="msg" id="msgMain"></div>
+  <button class="btn btn-gold btn-big" onclick="startAtt('in')">✋ تسجيل حضور</button>
+  <button class="btn btn-dark btn-big" onclick="startAtt('out')">🚪 تسجيل انصراف</button>
+  <button class="btn btn-dark" onclick="openLog()">📋 سجلي الشهري</button>
+  <span class="link" onclick="logout()">تغيير الحساب / خروج</span>
+  <div class="foot">سنتر هيما © اضغطي على الاسم فوق ٧ مرات لوضع الأدمن</div>
+</div>
+
+<!-- ============ سجل الشهر ============ -->
+<div class="page" id="pgLog">
+  <h1>سجلي الشهري</h1>
+  <div class="card">
+    <div class="row2">
+      <select id="logM"></select>
+      <select id="logY"></select>
+    </div>
+    <button class="btn btn-gold" onclick="loadLog()">عرض</button>
+    <div class="msg" id="msgLog"></div>
+    <div id="logTbl"></div>
+  </div>
+  <button class="btn btn-dark" onclick="show('pgMain')">رجوع</button>
+</div>
+
+<!-- ============ وضع الأدمن ============ -->
+<div class="page" id="pgAdmin">
+  <h1>وضع الأدمن</h1>
+  <div class="sub">تسجيل موقع GPS للفرع - لازم تكون واقف جوه الفرع نفسه</div>
+  <div class="card">
+    <label>مفتاح الأدمن</label>
+    <input id="admKey" type="password">
+    <label>الفرع</label>
+    <select id="admBranch">
+      <option value="الهرم">الهرم</option>
+      <option value="حلوان">حلوان</option>
+    </select>
+    <button class="btn btn-gold" onclick="setLoc()">📍 سجل موقع الفرع ده</button>
+    <div class="msg" id="msgAdm"></div>
+  </div>
+  <button class="btn btn-dark" onclick="show('pgMain')">رجوع</button>
+</div>
+
+<!-- ============ ماسح QR ============ -->
+<div id="scanBox">
+  <div id="scanTop">وجهي الكاميرا على كود الفرع</div>
+  <div style="position:relative;flex:1;overflow:hidden">
+    <video id="vid" playsinline muted></video>
+    <div class="frame"></div>
+  </div>
+  <div id="scanBottom">
+    <button class="btn btn-dark" onclick="manualQR()">الكاميرا مش شغالة؟ اكتبي الكود اليدوي</button>
+    <button class="btn btn-dark" onclick="stopScan(true)">إلغاء</button>
+  </div>
+</div>
+
+<script>
+var cfg = {};
+try { cfg = JSON.parse(localStorage.getItem('himaCfg') || '{}'); } catch(e) {}
+
+function show(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.getElementById(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+function msg(id, kind, text) {
+  var m = document.getElementById(id);
+  m.className = 'msg ' + (kind || '');
+  m.innerHTML = text || '';
+}
+
+// ---------- التشغيل ----------
+window.onload = function() {
+  if (cfg.srv && cfg.code && cfg.pin) {
+    initMain();
+  } else {
+    if (cfg.srv) document.getElementById('srvWrap').style.display = 'none';
+    show('pgSetup');
+  }
+  setInterval(tick, 1000); tick();
+  setInterval(flushQueue, 30000);
+  flushQueue();
+};
+
+function tick() {
+  var n = new Date();
+  var h = n.getHours(), mn = ('0'+n.getMinutes()).slice(-2), s = ('0'+n.getSeconds()).slice(-2);
+  var ap = h >= 12 ? 'م' : 'ص'; h = h % 12; if (h === 0) h = 12;
+  document.getElementById('clock').textContent = h + ':' + mn + ':' + s + ' ' + ap;
+  var days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  document.getElementById('dateLine').textContent =
+    days[n.getDay()] + ' ' + n.getDate() + '/' + (n.getMonth()+1) + '/' + n.getFullYear();
+}
+
+// ---------- تسجيل الدخول ----------
+function doLogin() {
+  var srv = cfg.srv || document.getElementById('inSrv').value.trim();
+  var code = document.getElementById('inCode').value.trim();
+  var pin = document.getElementById('inPin').value.trim();
+  if (!srv || srv.indexOf('https://script.google.com/macros/') !== 0) {
+    return msg('msgSetup','err','رابط السيرفر مش صح - لازم يبدأ بـ script.google.com/macros');
+  }
+  if (!code || !pin) return msg('msgSetup','err','اكتبي الكود والرقم السري');
+  msg('msgSetup','wait','ثواني... بنتأكد من البيانات');
+  fetch(srv + '?action=login&code=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return msg('msgSetup','err', d.msg || 'غلط');
+      cfg = { srv:srv, code:code, pin:pin, name:d.name, branch:d.branch };
+      localStorage.setItem('himaCfg', JSON.stringify(cfg));
+      initMain();
+    })
+    .catch(function(){ msg('msgSetup','err','مفيش نت أو الرابط غلط - جربي تاني'); });
+}
+
+function initMain() {
+  document.getElementById('who').innerHTML = 'أهلًا <b>' + cfg.name + '</b> - فرع ' + cfg.branch;
+  msg('msgMain','','');
+  show('pgMain');
+}
+
+function logout() {
+  var keepSrv = cfg.srv;
+  localStorage.removeItem('himaCfg');
+  cfg = { srv: keepSrv };
+  localStorage.setItem('himaCfg', JSON.stringify(cfg));
+  document.getElementById('srvWrap').style.display = 'none';
+  document.getElementById('inCode').value = '';
+  document.getElementById('inPin').value = '';
+  msg('msgSetup','','');
+  show('pgSetup');
+}
+
+// ---------- الحضور والانصراف ----------
+var attType = 'in', attPos = null;
+
+function startAtt(type) {
+  attType = type;
+  msg('msgMain','wait','📍 بنحدد موقعك... خلي الـ GPS شغال');
+  if (!navigator.geolocation) { attPos = null; return openScan(); }
+  navigator.geolocation.getCurrentPosition(
+    function(p) {
+      attPos = { lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy) };
+      openScan();
+    },
+    function() {
+      msg('msgMain','err','مقدرناش نحدد موقعك - فعّلي الموقع (GPS) واسمحي للمتصفح وجربي تاني');
+    },
+    { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+  );
+}
+
+// ---------- الماسح ----------
+var stream = null, scanning = false;
+
+function openScan() {
+  msg('msgMain','','');
+  document.getElementById('scanBox').classList.add('on');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } })
+    .then(function(s) {
+      stream = s;
+      var v = document.getElementById('vid');
+      v.srcObject = s; v.play();
+      scanning = true;
+      requestAnimationFrame(scanLoop);
+    })
+    .catch(function() {
+      stopScan(false);
+      manualQR();
+    });
+}
+
+function scanLoop() {
+  if (!scanning) return;
+  var v = document.getElementById('vid');
+  if (v.readyState === v.HAVE_ENOUGH_DATA) {
+    var c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    var x = c.getContext('2d');
+    x.drawImage(v, 0, 0, c.width, c.height);
+    var img = x.getImageData(0, 0, c.width, c.height);
+    var q = jsQR(img.data, img.width, img.height, { inversionAttempts:'dontInvert' });
+    if (q && q.data) {
+      stopScan(false);
+      sendAtt(q.data.trim());
+      return;
+    }
+  }
+  requestAnimationFrame(scanLoop);
+}
+
+function stopScan(cancelled) {
+  scanning = false;
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  document.getElementById('scanBox').classList.remove('on');
+  if (cancelled) msg('msgMain','','');
+}
+
+function manualQR() {
+  stopScan(false);
+  var m = prompt('اكتبي الكود اليدوي المعلق في الفرع:');
+  if (m && m.trim()) sendAtt(m.trim());
+}
+
+// ---------- الإرسال + طابور الأوفلاين ----------
+function sendAtt(qr) {
+  var payload = {
+    action:'att', code:cfg.code, pin:cfg.pin, type:attType, qr:qr,
+    lat: attPos ? attPos.lat : '', lng: attPos ? attPos.lng : '',
+    acc: attPos ? attPos.acc : '', clientTime: new Date().toISOString()
+  };
+  msg('msgMain','wait','⏳ بنسجل...');
+  postSrv(payload)
+    .then(function(d) {
+      if (d.ok) msg('msgMain','ok','✅ ' + d.msg);
+      else msg('msgMain','err','❌ ' + d.msg);
+    })
+    .catch(function() {
+      queuePush(payload);
+      msg('msgMain','wait','📡 مفيش نت دلوقتي - التسجيل اتحفظ وهيتبعت لوحده أول ما النت يرجع.<br>خدي بالك: هيتحسب بوقت وصوله للسيرفر.');
+    });
+}
+
+function postSrv(payload) {
+  return fetch(cfg.srv, { method:'POST', body: JSON.stringify(payload) })
+    .then(function(r){ return r.json(); });
+}
+
+function queuePush(p) {
+  var q = JSON.parse(localStorage.getItem('himaQ') || '[]');
+  q.push(p);
+  localStorage.setItem('himaQ', JSON.stringify(q));
+  qBadge();
+}
+
+function qBadge() {
+  var q = JSON.parse(localStorage.getItem('himaQ') || '[]');
+  var b = document.getElementById('qBadge');
+  if (q.length) { b.style.display='block'; b.textContent='📡 في ' + q.length + ' تسجيل مستني النت'; }
+  else b.style.display='none';
+}
+
+function flushQueue() {
+  var q = JSON.parse(localStorage.getItem('himaQ') || '[]');
+  qBadge();
+  if (!q.length || !cfg.srv || !navigator.onLine) return;
+  var p = q[0];
+  postSrv(p).then(function(d) {
+    q.shift();
+    localStorage.setItem('himaQ', JSON.stringify(q));
+    qBadge();
+    if (q.length) flushQueue();
+    else msg('msgMain','ok','✅ التسجيلات المتأخرة اتبعتت كلها');
+  }).catch(function(){});
+}
+
+// ---------- السجل الشهري ----------
+function openLog() {
+  var n = new Date();
+  var mSel = document.getElementById('logM'), ySel = document.getElementById('logY');
+  if (!mSel.options.length) {
+    for (var i=1;i<=12;i++) mSel.add(new Option('شهر '+i, i));
+    for (var y=n.getFullYear()-1;y<=n.getFullYear()+1;y++) ySel.add(new Option(y, y));
+  }
+  mSel.value = n.getMonth()+1; ySel.value = n.getFullYear();
+  document.getElementById('logTbl').innerHTML = '';
+  msg('msgLog','','');
+  show('pgLog');
+  loadLog();
+}
+
+function fmt12(t) {
+  var p = t.split(':'), h = +p[0], ap = h>=12?'م':'ص';
+  h = h%12; if (h===0) h=12;
+  return h + ':' + p[1] + ' ' + ap;
+}
+
+function loadLog() {
+  msg('msgLog','wait','⏳ بنجيب السجل...');
+  var m = document.getElementById('logM').value, y = document.getElementById('logY').value;
+  fetch(cfg.srv + '?action=mylog&code='+encodeURIComponent(cfg.code)+'&pin='+encodeURIComponent(cfg.pin)+'&y='+y+'&m='+m)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return msg('msgLog','err', d.msg);
+      msg('msgLog','','');
+      if (!d.rows.length) return msg('msgLog','wait','مفيش تسجيلات في الشهر ده');
+      var days = {};
+      d.rows.forEach(function(r) {
+        if (!days[r.d]) days[r.d] = { in:'', out:'' };
+        if (r.k === 'حضور' && !days[r.d].in) days[r.d].in = r.t;
+        if (r.k === 'انصراف') days[r.d].out = r.t;
+      });
+      var wd = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+      var h = '<table><tr><th>التاريخ</th><th>اليوم</th><th>حضور</th><th>انصراف</th></tr>';
+      Object.keys(days).sort().forEach(function(k) {
+        var dt = new Date(k + 'T00:00:00');
+        h += '<tr><td>' + dt.getDate() + '/' + (dt.getMonth()+1) + '</td><td>' + wd[dt.getDay()] + '</td><td>' +
+             (days[k].in ? fmt12(days[k].in) : '-') + '</td><td>' +
+             (days[k].out ? fmt12(days[k].out) : '-') + '</td></tr>';
+      });
+      document.getElementById('logTbl').innerHTML = h + '</table>';
+    })
+    .catch(function(){ msg('msgLog','err','مفيش نت - جربي تاني'); });
+}
+
+// ---------- وضع الأدمن ----------
+var taps = 0, tapTimer = null;
+function adminTap() {
+  taps++;
+  clearTimeout(tapTimer);
+  tapTimer = setTimeout(function(){ taps = 0; }, 2500);
+  if (taps >= 7) { taps = 0; msg('msgAdm','',''); show('pgAdmin'); }
+}
+
+function setLoc() {
+  var key = document.getElementById('admKey').value.trim();
+  var br = document.getElementById('admBranch').value;
+  if (!key) return msg('msgAdm','err','اكتب مفتاح الأدمن');
+  msg('msgAdm','wait','📍 بنجيب موقع دقيق... اثبت مكانك ثواني');
+  navigator.geolocation.getCurrentPosition(
+    function(p) {
+      if (p.coords.accuracy > 80) {
+        msg('msgAdm','err','الدقة ضعيفة ('+Math.round(p.coords.accuracy)+' متر) - اقرب من الباب أو الشباك وجرب تاني');
+        return;
+      }
+      postSrv({ action:'setloc', key:key, branch:br, lat:p.coords.latitude, lng:p.coords.longitude })
+        .then(function(d){ msg('msgAdm', d.ok?'ok':'err', (d.ok?'✅ ':'❌ ') + d.msg + (d.ok?' (دقة '+Math.round(p.coords.accuracy)+' م)':'')); })
+        .catch(function(){ msg('msgAdm','err','مفيش نت - جرب تاني'); });
+    },
+    function(){ msg('msgAdm','err','مقدرناش نجيب الموقع - فعّل GPS واسمح للمتصفح'); },
+    { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
+  );
+}
+</script>
+</body>
+</html>
