@@ -137,6 +137,15 @@
 var cfg = {};
 try { cfg = JSON.parse(localStorage.getItem('himaCfg') || '{}'); } catch(e) {}
 
+function devId() {
+  var d = localStorage.getItem('himaDev');
+  if (!d) {
+    d = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem('himaDev', d);
+  }
+  return d;
+}
+
 function show(id) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
   document.getElementById(id).classList.add('on');
@@ -181,7 +190,7 @@ function doLogin() {
   }
   if (!code || !pin) return msg('msgSetup','err','اكتبي الكود والرقم السري');
   msg('msgSetup','wait','ثواني... بنتأكد من البيانات');
-  fetch(srv + '?action=login&code=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin))
+  fetch(srv + '?action=login&code=' + encodeURIComponent(code) + '&pin=' + encodeURIComponent(pin) + '&dev=' + encodeURIComponent(devId()))
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (!d.ok) return msg('msgSetup','err', d.msg || 'غلط');
@@ -284,7 +293,7 @@ function manualQR() {
 // ---------- الإرسال + طابور الأوفلاين ----------
 function sendAtt(qr) {
   var payload = {
-    action:'att', code:cfg.code, pin:cfg.pin, type:attType, qr:qr,
+    action:'att', code:cfg.code, pin:cfg.pin, type:attType, qr:qr, dev:devId(),
     lat: attPos ? attPos.lat : '', lng: attPos ? attPos.lng : '',
     acc: attPos ? attPos.acc : '', clientTime: new Date().toISOString()
   };
